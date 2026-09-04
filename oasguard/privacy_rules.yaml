@@ -1,0 +1,241 @@
+# Personal-data classification rules.
+#
+# Sources of the taxonomy and identifiers below:
+#   - Microsoft Presidio recognizers (github.com/microsoft/presidio)
+#   - Google Cloud DLP infoTypes (cloud.google.com/dlp/docs/infotypes-reference)
+#   - CNIL "donnees personnelles" categories (cnil.fr)
+#
+# Each entry may carry:
+#   category : the kind of personal data
+#   gdpr     : the article cited in reports
+#   severity : critical | high | medium
+#   verify   : true when the GDPR classification is context-dependent and a
+#              human should confirm it (e.g. an IP address, a VAT number that
+#              may belong to a company, a postal code on its own)
+#   label    : a human-readable name (optional; the key is humanised if absent)
+#
+# GDPR article mapping:
+#   Art. 87 : national / tax identification numbers (Member-State law governs)
+#   Art. 6  : ordinary personal data (contact, identity, location, financial,
+#             online identifiers) -- lawful basis required
+#   Art. 9  : special categories only (health, beliefs, biometrics, genetics,
+#             sexual orientation, racial/ethnic origin, political opinion,
+#             trade-union membership) -- processing prohibited without exception
+
+# ---------------------------------------------------------------------------
+# exclusions: checked first. A field matching any of these is never classified,
+# so PII tokens do not fire on structural field names (file_name, object_id...).
+# ---------------------------------------------------------------------------
+exclusions:
+  # exact snake_case field names that are never personal data
+  field_names:
+    - file_name
+    - display_name
+    - product_name
+    - plan_name
+    - brand_name
+    - company_name
+    - business_name
+    - event_name
+    - object_name
+    - schema_name
+    - class_name
+    - table_name
+    - column_name
+    - host_name
+    - domain_name
+    - template_name
+    - bank_name
+    - method_name
+    - field_name
+    - tag_name
+    - statement_descriptor
+  # whole tokens that, when present, suppress the match (structural vocabulary
+  # that never appears as a token in a genuine personal-data field name)
+  tokens:
+    - file
+    - object
+    - class
+    - schema
+    - template
+    - column
+    - table
+    - mime
+    - collection    # *_collection are config toggles (billing_address_collection)
+    - check         # *_check are verification statuses (cvc_check, address_line1_check)
+
+# ---------------------------------------------------------------------------
+# phrases: matched against the whole snake_case field name on token boundaries.
+# Multi-word identifiers that must not be single tokens.
+# ---------------------------------------------------------------------------
+phrases:
+  # -- National & government identifiers (Art. 87) ---------------------------
+  social_security_number:   {category: national_id, gdpr: "Art. 87", severity: critical, label: "Social Security Number"}
+  national_id:              {category: national_id, gdpr: "Art. 87", severity: critical}
+  national_insurance_number: {category: national_id, gdpr: "Art. 87", severity: critical, label: "UK National Insurance No."}
+  passport_number:          {category: national_id, gdpr: "Art. 87", severity: critical}
+  drivers_license:          {category: national_id, gdpr: "Art. 87", severity: high}
+  id_card_number:           {category: national_id, gdpr: "Art. 87", severity: high}
+  tax_id:                   {category: national_id, gdpr: "Art. 87", severity: critical}
+  tax_identifier:           {category: national_id, gdpr: "Art. 87", severity: critical}
+  vat_number:               {category: national_id, gdpr: "Art. 87", severity: high, verify: true}
+  numero_securite_sociale:  {category: national_id, gdpr: "Art. 87", severity: critical, label: "French NIR"}
+  numero_fiscal:            {category: national_id, gdpr: "Art. 87", severity: critical, label: "French tax number"}
+  carte_identite:           {category: national_id, gdpr: "Art. 87", severity: high, label: "French ID card"}
+  permis_conduire:          {category: national_id, gdpr: "Art. 87", severity: high, label: "French driving licence"}
+
+  # -- Identity (Art. 6) -----------------------------------------------------
+  date_of_birth:            {category: identity, gdpr: "Art. 6", severity: high}
+  place_of_birth:           {category: identity, gdpr: "Art. 6", severity: high}
+  full_name:                {category: identity, gdpr: "Art. 6", severity: medium}
+  first_name:               {category: identity, gdpr: "Art. 6", severity: medium}
+  last_name:                {category: identity, gdpr: "Art. 6", severity: medium}
+  maiden_name:              {category: identity, gdpr: "Art. 6", severity: medium}
+  date_naissance:           {category: identity, gdpr: "Art. 6", severity: high, label: "Date of birth (FR)"}
+  lieu_naissance:           {category: identity, gdpr: "Art. 6", severity: high, label: "Place of birth (FR)"}
+  nom_famille:              {category: identity, gdpr: "Art. 6", severity: medium, label: "Family name (FR)"}
+  nom_jeune_fille:          {category: identity, gdpr: "Art. 6", severity: medium, label: "Maiden name (FR)"}
+
+  # -- Contact (Art. 6) ------------------------------------------------------
+  email_address:            {category: contact, gdpr: "Art. 6", severity: high}
+  phone_number:             {category: contact, gdpr: "Art. 6", severity: high}
+  mobile_number:            {category: contact, gdpr: "Art. 6", severity: high}
+  home_phone:               {category: contact, gdpr: "Art. 6", severity: high}
+  fax_number:               {category: contact, gdpr: "Art. 6", severity: medium}
+  numero_telephone:         {category: contact, gdpr: "Art. 6", severity: high, label: "Phone number (FR)"}
+  adresse_email:            {category: contact, gdpr: "Art. 6", severity: high, label: "Email (FR)"}
+
+  # -- Location (Art. 6) -----------------------------------------------------
+  postal_code:              {category: location, gdpr: "Art. 6", severity: medium, verify: true}
+  zip_code:                 {category: location, gdpr: "Art. 6", severity: medium, verify: true}
+  home_address:             {category: location, gdpr: "Art. 6", severity: high}
+  billing_address:          {category: location, gdpr: "Art. 6", severity: high}
+  shipping_address:         {category: location, gdpr: "Art. 6", severity: high}
+  street_address:           {category: location, gdpr: "Art. 6", severity: high}
+  code_postal:              {category: location, gdpr: "Art. 6", severity: medium, verify: true, label: "Postal code (FR)"}
+  adresse_postale:          {category: location, gdpr: "Art. 6", severity: high, label: "Postal address (FR)"}
+
+  # -- Financial (Art. 6) ----------------------------------------------------
+  bank_account:             {category: financial, gdpr: "Art. 6", severity: high}
+  account_number:           {category: financial, gdpr: "Art. 6", severity: high, verify: true}
+  routing_number:           {category: financial, gdpr: "Art. 6", severity: high}
+  credit_card:              {category: financial, gdpr: "Art. 6", severity: critical}
+  card_number:              {category: financial, gdpr: "Art. 6", severity: critical}
+  iban_number:              {category: financial, gdpr: "Art. 6", severity: high}
+  numero_compte:            {category: financial, gdpr: "Art. 6", severity: high, label: "Bank account (FR)"}
+
+  # -- Online identifiers (Art. 6) -------------------------------------------
+  ip_address:               {category: online_id, gdpr: "Art. 6", severity: high, verify: true}
+  mac_address:              {category: online_id, gdpr: "Art. 6", severity: medium, verify: true}
+  device_id:                {category: online_id, gdpr: "Art. 6", severity: medium, verify: true}
+  adresse_ip:               {category: online_id, gdpr: "Art. 6", severity: high, verify: true, label: "IP address (FR)"}
+
+  # -- Special categories (Art. 9) -------------------------------------------
+  health_condition:         {category: health, gdpr: "Art. 9", severity: critical}
+  medical_record:           {category: health, gdpr: "Art. 9", severity: critical}
+  blood_type:               {category: health, gdpr: "Art. 9", severity: critical}
+  religious_belief:         {category: belief, gdpr: "Art. 9", severity: critical}
+  trade_union:              {category: trade_union, gdpr: "Art. 9", severity: critical}
+  sexual_orientation:       {category: sexual_orientation, gdpr: "Art. 9", severity: critical}
+  political_opinion:        {category: political, gdpr: "Art. 9", severity: critical}
+  ethnic_origin:            {category: ethnicity, gdpr: "Art. 9", severity: critical, verify: true}
+  racial_origin:            {category: ethnicity, gdpr: "Art. 9", severity: critical, verify: true}
+  genetic_data:             {category: genetic, gdpr: "Art. 9", severity: critical}
+  biometric_data:           {category: biometric, gdpr: "Art. 9", severity: critical}
+
+# ---------------------------------------------------------------------------
+# tokens: single-word matches against the field name split into words.
+# ---------------------------------------------------------------------------
+tokens:
+  # -- National identifiers (Art. 87) ----------------------------------------
+  ssn:         {category: national_id, gdpr: "Art. 87", severity: critical}
+  nir:         {category: national_id, gdpr: "Art. 87", severity: critical, label: "French NIR"}
+  passport:    {category: national_id, gdpr: "Art. 87", severity: critical}
+  nino:        {category: national_id, gdpr: "Art. 87", severity: critical}
+  # -- Identity (Art. 6) -----------------------------------------------------
+  name:        {category: identity, gdpr: "Art. 6", severity: medium}
+  firstname:   {category: identity, gdpr: "Art. 6", severity: medium}
+  lastname:    {category: identity, gdpr: "Art. 6", severity: medium}
+  prenom:      {category: identity, gdpr: "Art. 6", severity: medium, label: "First name (FR)"}
+  nom:         {category: identity, gdpr: "Art. 6", severity: medium, verify: true, label: "Name (FR)"}
+  dob:         {category: identity, gdpr: "Art. 6", severity: high}
+  birthdate:   {category: identity, gdpr: "Art. 6", severity: high}
+  age:         {category: identity, gdpr: "Art. 6", severity: medium, verify: true}
+  gender:      {category: identity, gdpr: "Art. 6", severity: medium, verify: true}
+  nationality: {category: identity, gdpr: "Art. 6", severity: medium, verify: true}
+  # -- Contact (Art. 6) ------------------------------------------------------
+  email:       {category: contact, gdpr: "Art. 6", severity: high}
+  phone:       {category: contact, gdpr: "Art. 6", severity: high}
+  telephone:   {category: contact, gdpr: "Art. 6", severity: high}
+  mobile:      {category: contact, gdpr: "Art. 6", severity: high, verify: true}
+  courriel:    {category: contact, gdpr: "Art. 6", severity: high, label: "Email (FR)"}
+  # -- Location (Art. 6) -----------------------------------------------------
+  address:     {category: location, gdpr: "Art. 6", severity: high}
+  adresse:     {category: location, gdpr: "Art. 6", severity: high, label: "Address (FR)"}
+  zipcode:     {category: location, gdpr: "Art. 6", severity: medium, verify: true}
+  postcode:    {category: location, gdpr: "Art. 6", severity: medium, verify: true}
+  # -- Financial (Art. 6) ----------------------------------------------------
+  iban:        {category: financial, gdpr: "Art. 6", severity: high}
+  bic:         {category: financial, gdpr: "Art. 6", severity: medium}
+  cvv:         {category: financial, gdpr: "Art. 6", severity: critical}
+  cvc:         {category: financial, gdpr: "Art. 6", severity: critical}
+  # -- Online identifiers (Art. 6) -------------------------------------------
+  ip:          {category: online_id, gdpr: "Art. 6", severity: high, verify: true}
+  imei:        {category: online_id, gdpr: "Art. 6", severity: medium}
+  geolocation: {category: online_id, gdpr: "Art. 6", severity: high}
+  # -- Special categories (Art. 9) -------------------------------------------
+  health:      {category: health, gdpr: "Art. 9", severity: critical, verify: true}
+  religion:    {category: belief, gdpr: "Art. 9", severity: critical, verify: true}
+  ethnicity:   {category: ethnicity, gdpr: "Art. 9", severity: critical, verify: true}
+  biometric:   {category: biometric, gdpr: "Art. 9", severity: critical}
+  genetic:     {category: genetic, gdpr: "Art. 9", severity: critical}
+
+# ---------------------------------------------------------------------------
+# value_patterns: regexes on the value, for PII whose field name is uninformative.
+# ---------------------------------------------------------------------------
+value_patterns:
+  - {pattern: '^\d{3}-\d{2}-\d{4}$',                              category: national_id, gdpr: "Art. 87", severity: critical, label: "US SSN"}
+  - {pattern: '^[12]\d{2}(0[1-9]|1[0-2])\d{2}\d{3}\d{3}\d{2}$',   category: national_id, gdpr: "Art. 87", severity: critical, label: "French NIR"}
+  - {pattern: '^FR[0-9A-Z]{2}\d{9}$',                             category: national_id, gdpr: "Art. 87", severity: high, verify: true, label: "French VAT"}
+  - {pattern: '^[^@\s]+@[^@\s]+\.[a-zA-Z]{2,}$',                  category: contact,     gdpr: "Art. 6",  severity: high, label: "Email address"}
+  - {pattern: '^(?:\+33|0)[1-9]\d{8}$',                           category: contact,     gdpr: "Art. 6",  severity: high, verify: true, label: "French phone"}
+  - {pattern: '^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$',                   category: financial,   gdpr: "Art. 6",  severity: high, label: "IBAN"}
+  - {pattern: '^(?:4\d{12}(?:\d{3})?|5[1-5]\d{14}|3[47]\d{13}|6(?:011|5\d{2})\d{12})$', category: financial, gdpr: "Art. 6", severity: critical, label: "Credit card"}
+  - {pattern: '^(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)$', category: online_id, gdpr: "Art. 6", severity: high, verify: true, label: "IPv4 address"}
+  - {pattern: '^([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}$',         category: online_id,   gdpr: "Art. 6",  severity: medium, verify: true, label: "MAC address"}
+
+# ---------------------------------------------------------------------------
+# text_patterns: unanchored regexes, searched INSIDE declared free-text fields
+# (description, footer, comment) to catch PII embedded in prose.
+# ---------------------------------------------------------------------------
+text_patterns:
+  - {pattern: '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}',    category: contact,     gdpr: "Art. 6",  severity: high, label: "email address"}
+  - {pattern: '(?:\+33|0)[1-9](?:[ .-]?\d{2}){4}',                 category: contact,     gdpr: "Art. 6",  severity: high, label: "French phone"}
+  - {pattern: '\b\d{3}-\d{2}-\d{4}\b',                             category: national_id, gdpr: "Art. 87", severity: critical, label: "US SSN"}
+  - {pattern: '\b[A-Z]{2}\d{2}(?:[ ]?[A-Z0-9]{4}){2,7}\b',         category: financial,   gdpr: "Art. 6",  severity: high, label: "IBAN"}
+
+# ---------------------------------------------------------------------------
+# sensitive: a registry of field signals whose mere presence in a response is a
+# governance concern, regardless of whether the field is declared. `match` is a
+# whole snake_case token; `path` (optional) requires that substring in the JSON
+# path. `kind` is the inconsistency type reported.
+# ---------------------------------------------------------------------------
+sensitive:
+  # -- secrets (security, not a GDPR category) -------------------------------
+  - {match: client_secret, category: secret, classification: "Security — secret credential", severity: critical, kind: secret_exposure}
+  - {match: secret,        category: secret, classification: "Security — secret credential", severity: critical, kind: secret_exposure}
+  - {match: payload,       category: secret, classification: "Security — secret payload", severity: high, kind: secret_exposure, path: secret}
+  # -- financial identifiers -------------------------------------------------
+  - {match: routing_number, category: financial, classification: "GDPR Art. 6 — financial identifier", severity: high, kind: financial_exposure}
+  - {match: account_number, category: financial, classification: "GDPR Art. 6 — financial identifier", severity: high, kind: financial_exposure}
+  - {match: iban,           category: financial, classification: "GDPR Art. 6 — financial identifier", severity: high, kind: financial_exposure}
+  - {match: last4,          category: financial, classification: "GDPR Art. 6 — financial (masked)", severity: medium, kind: financial_exposure}
+  - {match: fingerprint,    category: financial, classification: "GDPR Art. 6 — payment fingerprint", severity: medium, kind: financial_exposure, verify: true}
+  # -- special-category / national identifiers -------------------------------
+  - {match: id_number,      category: national_id, classification: "GDPR Art. 87 — national identifier", severity: critical, kind: sensitive_data_exposure}
+  - {match: ssn_last_4,     category: national_id, classification: "GDPR Art. 87 — national identifier (partial)", severity: high, kind: sensitive_data_exposure}
+  - {match: dob,            category: identity, classification: "GDPR Art. 9 — potential special category", severity: high, kind: sensitive_data_exposure, verify: true}
+  # -- consent / audit evidence ----------------------------------------------
+  - {match: user_agent,     category: audit, classification: "GDPR Art. 6/7 — consent/audit evidence", severity: medium, kind: consent_audit_exposure}
+  - {match: tos_acceptance, category: consent, classification: "GDPR Art. 6/7 — consent record", severity: medium, kind: consent_audit_exposure}
+  - {match: consent,        category: consent, classification: "GDPR Art. 6/7 — consent record", severity: medium, kind: consent_audit_exposure, verify: true}

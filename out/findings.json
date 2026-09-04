@@ -1,0 +1,12 @@
+{
+  "summary": {
+    "responses_analysed": 0,
+    "schema_matched": 0,
+    "unmatched": 0,
+    "inconsistencies": 0,
+    "exposures": 0
+  },
+  "verdict": "No inconsistencies and no privacy findings in the 0 analysed responses.",
+  "inconsistencies": [],
+  "exposures": []
+}
