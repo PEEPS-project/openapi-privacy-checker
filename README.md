@@ -72,7 +72,7 @@ echo "STRIPE_API_KEY=sk_test_your_key_here" > .env   # Stripe TEST key (sandbox 
 One-shot run — capture, detect, enrich:
 
 ```bash
-oasguard run spec3.json
+oasguard all
 ```
 
 Analyze an existing trace against any spec (no live API calls — portable mode):
